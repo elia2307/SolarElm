@@ -82,6 +82,7 @@ update msg model =
 
 
 
+
 coordinate_bound : Float
 coordinate_bound = 1 
 update_coordinates : Vec3 -> Vec3 -> Vec3 
@@ -102,8 +103,6 @@ update_velocity velocity coord =
         multiply_vec3_fields velocity mult_vector
 
         
-
-
 multiply_vec3_fields : Vec3 -> Vec3 -> Vec3
 multiply_vec3_fields a b =
     vec3 (( Vec3.getX a) * ( Vec3.getX b)) ((Vec3.getY a) * (Vec3.getY b)) ((Vec3.getZ a) * (Vec3.getZ b))
@@ -128,13 +127,14 @@ view model =
     let 
         uniforms = create_uniforms model.angle 
     in 
-        div [] 
-            [WebGL.toHtml
-                [ width 1080, height 720, style "display" "block", style "width" "90%", style "height" "90%"
+        div [ style "background-color" "black", style "top" "0" , style "left" "0" , style "bottom" "0" , style "right" "0", style "position" "fixed"] 
+            [
+            input [ placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
+            , WebGL.toHtml
+                [ width 2000, height 2000, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black"
                 ]
                 [ show_mesh (pyramid_cube_mesh model.coordinates 0.5) uniforms 
                 ]
-            , input [ placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
             ]
 
 

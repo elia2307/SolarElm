@@ -11,7 +11,7 @@ import Browser
 import Browser.Events as Events
 import Html exposing (Html, input, div)
 import Html.Events exposing (onInput)
-import Html.Attributes exposing (width, height, style, value, placeholder)
+import Html.Attributes exposing (width, height, style, value, placeholder, type_)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
@@ -129,7 +129,7 @@ view model =
     in 
         div [ style "background-color" "black", style "top" "0" , style "left" "0" , style "bottom" "0" , style "right" "0", style "position" "fixed"] 
             [
-            input [ placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
+            input [ type_ "number",  placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
             , WebGL.toHtml
                 [ width 2000, height 2000, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black"
                 ]

@@ -1,4 +1,4 @@
-module WeirdCube exposing (..)
+module Main exposing (..)
 
 -- Render a spinning cube.
 --
@@ -16,6 +16,7 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
 import Utils exposing (pyramid_cube_mesh, Vertex)
+import Math.Matrix4 exposing (mul)
 
 
 -- MAIN
@@ -46,7 +47,13 @@ type alias Model =
 
 init : () -> (Model, Cmd Msg)
 init () =
-    ( {rotation_speed = 10 ,angle = 0,  coordinates = (vec3 1 1 1) , velocity= (vec3 0.001 0.001 0.001)},  Cmd.none )
+    let 
+        initial_velocity = vec3 0.001 0.001 0.001
+        initial_coordinate = vec3 0 0 0 
+        start_rotation_speed = 10
+        start_angle = 0
+    in 
+        ( {rotation_speed = start_rotation_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity},  Cmd.none )
 
 
 
@@ -61,13 +68,11 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         TimeDelta delta ->
-                if not (is_cube_in_bounds model.coordinates) then 
-                        ({model 
-                        |angle = model.angle + delta * (model.rotation_speed / 5000)  
-                        ,coordinates = (Vec3.add model.coordinates (Vec3.scale ( -1 * delta) model.velocity)) 
-                        ,velocity = (Vec3.negate model.velocity)} , Cmd.none) 
-                else
-                     ({ model | angle = model.angle + delta  * (model.rotation_speed / 5000) , coordinates = (Vec3.add model.coordinates  ( Vec3.scale delta model.velocity )) }, Cmd.none )
+                let
+                    coordinates = update_coordinates model.coordinates ( Vec3.scale delta model.velocity)
+                    velocity = update_velocity model.velocity coordinates
+                in 
+                    ({ model | angle = model.angle + delta  * (model.rotation_speed / 5000) , coordinates = coordinates , velocity = velocity }, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             case String.toFloat newSpeed of 
             Nothing ->
@@ -77,12 +82,31 @@ update msg model =
 
 
 
-        
-is_cube_in_bounds : Vec3 -> Bool 
-is_cube_in_bounds point = 
-    (abs (Vec3.getX point))  <= 1 && ( abs ( Vec3.getY point)) <= 1 && ( abs (Vec3.getZ point)) <= 1 
+coordinate_bound : Float
+coordinate_bound = 1 
+update_coordinates : Vec3 -> Vec3 -> Vec3 
+update_coordinates coord offset = 
+    let 
+        sum = Vec3.add coord offset 
+    in 
+        vec3 (clamp -coordinate_bound coordinate_bound (Vec3.getX sum)) ( clamp -coordinate_bound coordinate_bound (Vec3.getY sum)) (clamp -coordinate_bound coordinate_bound (Vec3.getZ sum))  
 
-            
+update_velocity : Vec3 -> Vec3 -> Vec3 
+update_velocity velocity coord = 
+    let 
+        x = abs (Vec3.getX coord) ==  coordinate_bound 
+        y = abs (Vec3.getY coord) ==  coordinate_bound
+        z = abs (Vec3.getZ coord) ==  coordinate_bound
+        mult_vector = vec3 ( if x then -1 else 1) ( if y then -1 else 1) ( if z then -1 else 1) 
+    in 
+        multiply_vec3_fields velocity mult_vector
+
+        
+
+
+multiply_vec3_fields : Vec3 -> Vec3 -> Vec3
+multiply_vec3_fields a b =
+    vec3 (( Vec3.getX a) * ( Vec3.getX b)) ((Vec3.getY a) * (Vec3.getY b)) ((Vec3.getZ a) * (Vec3.getZ b))
             
 
 
@@ -106,7 +130,7 @@ view model =
     in 
         div [] 
             [WebGL.toHtml
-                [ width 1080, height 720, style "display" "block", style "width" "100%", style "height" "100%"
+                [ width 1080, height 720, style "display" "block", style "width" "90%", style "height" "90%"
                 ]
                 [ show_mesh (pyramid_cube_mesh model.coordinates 0.5) uniforms 
                 ]

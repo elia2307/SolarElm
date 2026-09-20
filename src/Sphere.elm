@@ -149,7 +149,7 @@ view model =
             , WebGL.toHtml
                 [ width 2000, height 2000, style "display" "table", style "width" "700px", style "height" "700px", style "background-color" "black"
                 ]
-                [ show_mesh (sphere_mesh model.coordinates 2 model.triangle_count) uniforms 
+                [ show_mesh (sphere_mesh model.coordinates 1.5 model.triangle_count) uniforms 
                 ]
             ]
 
@@ -174,7 +174,7 @@ create_uniforms angle =
         (Mat4.makeRotate (3 * angle) (vec3 0 1 0))
         (Mat4.makeRotate (2 * angle) (vec3 1 0 0))
         , perspective = Mat4.makePerspective 45 1 0.01 100
-        , camera = Mat4.makeLookAt (vec3 0 0 10) (vec3 0 0 0) (vec3 0 1 0)
+        , camera = Mat4.makeLookAt (vec3 0 0 9) (vec3 0 0 0) (vec3 0 1 0)
     }
 
 

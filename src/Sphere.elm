@@ -1,4 +1,4 @@
-module Main exposing (..)
+module Sphere exposing (..)
 
 -- Render a spinning cube.
 --
@@ -15,8 +15,10 @@ import Html.Attributes exposing (width, height, style, value, placeholder, type_
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
-import Utils exposing (pyramid_cube_mesh)
+import Utils exposing (sphere_mesh, pyramid_cube_mesh)
 import Matrix exposing (Vertex)
+import Main exposing (update_coordinates)
+import Main exposing (update_velocity)
 
 
 -- MAIN
@@ -41,6 +43,7 @@ type alias Model =
         ,rotation_speed : Float 
         ,coordinates : Vec3
         ,velocity : Vec3
+        , triangle_count : Int
     }
 
 
@@ -50,10 +53,10 @@ init () =
     let 
         initial_velocity = vec3 0.001 0.001 0.001
         initial_coordinate = vec3 0 0 0 
-        start_rotation_speed = 10
-        start_angle = 0
+        start_rotation_speed = 1
+        start_angle = 0.1
     in 
-        ( {rotation_speed = start_rotation_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity},  Cmd.none )
+        ( {rotation_speed = start_rotation_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity, triangle_count=300},  Cmd.none )
 
 
 
@@ -61,24 +64,36 @@ init () =
 
 
 type Msg
-    = TimeDelta Float | ChangeRotationSpeed String
+    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String
 
+
+fake_update : Msg -> Model -> (Model, Cmd Msg) 
+fake_update msg model = 
+    ( model , Cmd.none) 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         TimeDelta delta ->
-                let
-                    coordinates = update_coordinates model.coordinates ( Vec3.scale delta model.velocity)
+
+
+                let 
+                    coordinates = update_coordinates model.coordinates (Vec3.scale delta model.velocity)
                     velocity = update_velocity model.velocity coordinates
                 in 
-                    ({ model | angle = model.angle + delta  * (model.rotation_speed / 5000) , coordinates = coordinates , velocity = velocity }, Cmd.none )
+                ({ model | coordinates= coordinates, velocity = velocity , angle = model.angle + delta  * (model.rotation_speed / 5000) }, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             case String.toFloat newSpeed of 
             Nothing ->
                 (model, Cmd.none)
             Just speed ->
                 ( {model | rotation_speed= speed}, Cmd.none ) 
+        ChangeTriangleCount newTriangles -> 
+            case String.toInt newTriangles of 
+                Nothing -> 
+                    (model, Cmd.none) 
+                Just count ->
+                    ( {model | triangle_count = count}, Cmd.none)
 
 
 
@@ -127,13 +142,14 @@ view model =
     let 
         uniforms = create_uniforms model.angle 
     in 
-        div [ style "background-color" "black", style "top" "0" , style "left" "0" , style "bottom" "0" , style "right" "0", style "position" "fixed"] 
+        div [ style "background-color" "black"] 
             [
             input [ type_ "number",  placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
+            ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
             , WebGL.toHtml
-                [ width 2000, height 2000, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black"
+                [ width 2000, height 2000, style "display" "table", style "width" "700px", style "height" "700px", style "background-color" "black"
                 ]
-                [ show_mesh (pyramid_cube_mesh model.coordinates 0.5) uniforms 
+                [ show_mesh (sphere_mesh model.coordinates 2 model.triangle_count) uniforms 
                 ]
             ]
 
@@ -158,7 +174,7 @@ create_uniforms angle =
         (Mat4.makeRotate (3 * angle) (vec3 0 1 0))
         (Mat4.makeRotate (2 * angle) (vec3 1 0 0))
         , perspective = Mat4.makePerspective 45 1 0.01 100
-        , camera = Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
+        , camera = Mat4.makeLookAt (vec3 0 0 10) (vec3 0 0 0) (vec3 0 1 0)
     }
 
 

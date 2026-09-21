@@ -13,15 +13,21 @@ import Html exposing (Html, input, div)
 import Html.Events exposing (onInput)
 import Html.Attributes exposing (width, height, style, value, placeholder, type_)
 import Math.Matrix4 as Mat4 exposing (Mat4)
+import Array exposing (Array)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
-import Utils exposing (sphere_mesh, pyramid_cube_mesh)
+import Meshes exposing (sphere_mesh)
 import Matrix exposing (Vertex)
-import Main exposing (update_coordinates)
-import Main exposing (update_velocity)
-
+import Shaders exposing (show_mesh, create_uniforms, create_global_transform_matrix)
+import Utils exposing (update_coordinates, update_velocity)
+import Html.Attributes exposing (coords)
+import Meshes exposing (pyramid_cube_mesh)
+import Array exposing (Array)
+import Random
 
 -- MAIN
+
+
 
 main : Program() Model Msg
 main =
@@ -37,15 +43,133 @@ main =
 -- MODEL
 
 
+type alias Object_data = 
+    {   mesh : WebGL.Mesh Vertex
+    , coordinates : Vec3
+    , rotation : Vec3
+    , velocity : Vec3
+    , rotation_spin_velocity: Vec3
+    }
+
+update_object_mesh : Object_data -> WebGL.Mesh Vertex -> Object_data
+update_object_mesh object mesh = 
+    { object | mesh = mesh}  
+
+update_object_coordinates : Object_data -> Vec3 -> Object_data
+update_object_coordinates object coords = { object | coordinates = coords}
+
+update_object_velocity : Object_data -> Vec3 -> Object_data
+update_object_velocity object vel = { object | velocity = vel}
+
+
+update_object_movement : Float -> Object_data -> Object_data 
+update_object_movement delta obj =  
+
+        let 
+
+                coords = update_coordinates obj.coordinates (Vec3.scale delta obj.velocity)
+                velocity = update_velocity obj.velocity coords
+                rotation = Vec3.add obj.rotation (Vec3.scale delta obj.rotation_spin_velocity) 
+
+        in 
+        { obj | coordinates = coords, velocity = velocity, rotation=rotation}  
+
+
+show_object : Object_data -> WebGL.Entity 
+show_object obj = 
+    let 
+        global_transform = create_global_transform_matrix obj.coordinates obj.rotation 
+        uniforms = create_uniforms 0 global_transform
+    in 
+    show_mesh obj.mesh uniforms
+
+type alias Scene_Objects = {objects : Array(Object_data) }
+
+fmodBy : Int -> Float   -> Float
+fmodBy  m x =
+    let
+        r = x - (toFloat (floor x))
+    in 
+    if (floor x) == 0 then 
+        r 
+    else 
+        (toFloat (modBy m (floor x))) + r
+    
+
+fix_nan : Float -> Float -> Float 
+fix_nan num fallback = 
+    if isNaN num then 
+        (fmodBy 2 fallback)
+    else 
+        num
+
+generate_random_sphere : Float -> Object_data
+generate_random_sphere n= 
+    let 
+        p = 7753757725325377
+        mod = modBy p ((floor ((n+133) * 125959)) * 2245849783) 
+        seed = ((-1) ^ n) * e * (sqrt (toFloat mod)) 
+        --x = fmodBy (floor (logBase 2 (sqrt (e ^ (seed * seed))))) ( (logBase 150 (seed*seed ^ (1/e))) * 1.32492853491 + (seed / 23)) 
+        --y = fmodBy 2 (logBase 1250 ( (e ^ seed) * 0.015)) 
+        --z = fmodBy 2 ((seed * 1.213) - 12)
+        x =  fix_nan ((fmodBy 17 (seed * seed * 9)) /10)  (n * 0.312)
+        y = fix_nan ((fmodBy 16 (seed * seed * seed * (sqrt seed))) / 10) (n * 0.123)
+        
+        z = fix_nan (fmodBy 3 (logBase 10 seed)) (n * 0.345)
+        coords = vec3 x y z 
+
+        --velocity = vec3 (0.00025*z + 0.000002 * (fmodBy 100 (n+163))) (-0.00012439*x - 0.000005 * (fmodBy 100 (n+345)) + 0.000001) (0.0001 * y + 0.0000009 * (fmodBy 100 (n+136)))  
+        velocity = vec3 (0.00025 * x + 0.00010 * y + 0.00009 * z + 0.00003) ( 0.00009 * x + 0.00013 * y + 0.0000913423 *z + 0.00003) (0.0001 * (x+y+z) + 0.00003)
+        rotation = vec3  (0.001*x) (0.001*y) (0.001*z) 
+        mesh = sphere_mesh (vec3 0 0 0) 0.1 250
+        rotation_spin_velocity = vec3 (0.0001 * x) (0.0001 * y ) (0.0001 * z)
+    in 
+    Object_data mesh coords rotation velocity rotation_spin_velocity
+
+
+generate_random_spheres : Int -> List(Object_data)
+generate_random_spheres number =
+    if number <= 0 then
+        []
+    else 
+        List.append (generate_random_spheres (number - 1)) [generate_random_sphere (toFloat (number+1))]
+    
+
+
+initialise_scene : Int -> Scene_Objects
+initialise_scene sphere_triangle_count = 
+    let 
+        sphere = { mesh = (sphere_mesh (vec3 0 0 0) 1 sphere_triangle_count), coordinates =  (vec3 0 0 0), rotation =  (vec3 0 0.1 0), 
+            velocity = (vec3 0.0001 0.0001 0.0001), 
+            rotation_spin_velocity =  (vec3 0.0 0.0005 0.00005)}
+        dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
+        randoms = generate_random_spheres 1000
+    in 
+    Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
+
+update_scene_sphere : Scene_Objects -> Object_data -> Scene_Objects
+update_scene_sphere scene sphere = { objects = (Array.set 0 sphere scene.objects)}  
+
+
+update_scene_movement : Scene_Objects -> Float -> Scene_Objects 
+update_scene_movement scene delta = 
+    Scene_Objects (Array.map (update_object_movement delta) scene.objects)
+    --Scene_Objects (update_object_movement scene.sphere delta) (update_object_movement scene.dia delta)  
+
+
+show_scene  :  Scene_Objects -> List(WebGL.Entity) 
+show_scene scene =Array.toList (Array.map show_object scene.objects)  
+
 
 type alias Model =
     {   angle : Float
-        ,rotation_speed : Float 
+        ,scene_speed : Float 
         ,coordinates : Vec3
         ,velocity : Vec3
         , triangle_count : Int
+        --, sphere_mesh : WebGL.Mesh Vertex 
+        , scene : Scene_Objects
     }
-
 
 
 init : () -> (Model, Cmd Msg)
@@ -53,10 +177,12 @@ init () =
     let 
         initial_velocity = vec3 0.001 0.001 0.001
         initial_coordinate = vec3 0 0 0 
-        start_rotation_speed = 1
+        start_scene_speed = 5
         start_angle = 0.1
+        default_triangle_count = 300
     in 
-        ( {rotation_speed = start_rotation_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity, triangle_count=300},  Cmd.none )
+        ( {scene_speed = start_scene_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count)} ,  Cmd.none )
+        --sphere_mesh = (sphere_mesh (vec3 0 0 0) 1 default_triangle_count)}
 
 
 
@@ -67,10 +193,6 @@ type Msg
     = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String
 
 
-fake_update : Msg -> Model -> (Model, Cmd Msg) 
-fake_update msg model = 
-    ( model , Cmd.none) 
-
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
@@ -80,48 +202,40 @@ update msg model =
                 let 
                     coordinates = update_coordinates model.coordinates (Vec3.scale delta model.velocity)
                     velocity = update_velocity model.velocity coordinates
+                    time_diff = delta * model.scene_speed 
                 in 
-                ({ model | coordinates= coordinates, velocity = velocity , angle = model.angle + delta  * (model.rotation_speed / 5000) }, Cmd.none )
+                ({ model | scene = (update_scene_movement model.scene time_diff),  coordinates= coordinates, velocity = velocity , angle = model.angle + delta  * (model.scene_speed / 5000) }, Cmd.none )
         ChangeRotationSpeed newSpeed ->
-            case String.toFloat newSpeed of 
-            Nothing ->
-                (model, Cmd.none)
-            Just speed ->
-                ( {model | rotation_speed= speed}, Cmd.none ) 
+            if newSpeed == "" then 
+                ( { model | scene_speed = 0} , Cmd.none) 
+            else 
+                case String.toFloat newSpeed of 
+                Nothing ->
+                    (model, Cmd.none)
+                Just speed ->
+                    ( {model | scene_speed= speed}, Cmd.none ) 
         ChangeTriangleCount newTriangles -> 
             case String.toInt newTriangles of 
                 Nothing -> 
                     (model, Cmd.none) 
                 Just count ->
-                    ( {model | triangle_count = count}, Cmd.none)
+                    let 
+                        --new_sphere = { model.objects.sphere | mesh = (sphere_mesh (vec3 0 0 0) 1 count)}
+                        maybe_sphere = Array.get 0 model.scene.objects 
+                    in 
+                    case maybe_sphere of 
+                        Nothing -> 
+                            (model, Cmd.none)
+                        Just sphere -> 
+                            let 
+                                new_sphere = update_object_mesh sphere (sphere_mesh (vec3  0 0 0) 1 count)
+                                scene = update_scene_sphere model.scene new_sphere
+                            in
+
+                            ( {model | triangle_count = count, scene = scene}, Cmd.none)
 
 
 
-
-coordinate_bound : Float
-coordinate_bound = 1 
-update_coordinates : Vec3 -> Vec3 -> Vec3 
-update_coordinates coord offset = 
-    let 
-        sum = Vec3.add coord offset 
-    in 
-        vec3 (clamp -coordinate_bound coordinate_bound (Vec3.getX sum)) ( clamp -coordinate_bound coordinate_bound (Vec3.getY sum)) (clamp -coordinate_bound coordinate_bound (Vec3.getZ sum))  
-
-update_velocity : Vec3 -> Vec3 -> Vec3 
-update_velocity velocity coord = 
-    let 
-        x = abs (Vec3.getX coord) ==  coordinate_bound 
-        y = abs (Vec3.getY coord) ==  coordinate_bound
-        z = abs (Vec3.getZ coord) ==  coordinate_bound
-        mult_vector = vec3 ( if x then -1 else 1) ( if y then -1 else 1) ( if z then -1 else 1) 
-    in 
-        multiply_vec3_fields velocity mult_vector
-
-        
-multiply_vec3_fields : Vec3 -> Vec3 -> Vec3
-multiply_vec3_fields a b =
-    vec3 (( Vec3.getX a) * ( Vec3.getX b)) ((Vec3.getY a) * (Vec3.getY b)) ((Vec3.getZ a) * (Vec3.getZ b))
-            
 
 
 
@@ -133,78 +247,19 @@ subscriptions _ =
     Events.onAnimationFrameDelta TimeDelta
 
 
-
 -- VIEW
 
 
 view : Model -> Html Msg
 view model =
-    let 
-        uniforms = create_uniforms model.angle 
-    in 
         div [ style "background-color" "black"] 
             [
-            input [ type_ "number",  placeholder "Rotation speed" , value (String.fromFloat model.rotation_speed), onInput ChangeRotationSpeed] []
+            input [ type_ "number",  placeholder "Scene speed" , value (String.fromFloat model.scene_speed), onInput ChangeRotationSpeed] []
             ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
             , WebGL.toHtml
                 [ width 2000, height 2000, style "display" "table", style "width" "700px", style "height" "700px", style "background-color" "black"
                 ]
-                [ show_mesh (sphere_mesh model.coordinates 1.5 model.triangle_count) uniforms 
-                ]
+                (show_scene model.scene)
             ]
 
 
-show_mesh : WebGL.Mesh Vertex -> Uniforms  -> WebGL.Entity
-show_mesh mesh uniforms = 
-    WebGL.entity vertexShader fragmentShader mesh uniforms
-
-
-
-type alias Uniforms =
-    { rotation : Mat4
-    , perspective : Mat4
-    , camera : Mat4
-    }
-
-
-create_uniforms : Float -> Uniforms
-create_uniforms angle =
-    { rotation =
-        Mat4.mul
-        (Mat4.makeRotate (3 * angle) (vec3 0 1 0))
-        (Mat4.makeRotate (2 * angle) (vec3 1 0 0))
-        , perspective = Mat4.makePerspective 45 1 0.01 100
-        , camera = Mat4.makeLookAt (vec3 0 0 9) (vec3 0 0 0) (vec3 0 1 0)
-    }
-
-
-
-
--- SHADERS
-
-
-vertexShader : WebGL.Shader Vertex Uniforms { vcolor : Vec3 }
-vertexShader =
-    [glsl|
-        attribute vec3 position;
-        attribute vec3 color;
-        uniform mat4 perspective;
-        uniform mat4 camera;
-        uniform mat4 rotation;
-        varying vec3 vcolor;
-        void main () {
-            gl_Position = perspective * camera * rotation * vec4(position, 1.0);
-            vcolor = color;
-        }
-    |]
-
-
-fragmentShader : WebGL.Shader {} Uniforms { vcolor : Vec3 }
-fragmentShader =
-    [glsl|
-        precision mediump float;
-        varying vec3 vcolor;
-        void main () {
-            gl_FragColor = 0.8 * vec4(vcolor, 1.0);
-        }
-    |]

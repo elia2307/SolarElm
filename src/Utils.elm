@@ -29,7 +29,7 @@ print_text str =
     0
 
 coordinate_bound : Float
-coordinate_bound = 2
+coordinate_bound = 5
 update_coordinates : Vec3 -> Vec3 -> Vec3 
 update_coordinates coord offset = 
     let 

@@ -75,8 +75,6 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         TimeDelta delta ->
-
-
                 let 
                     coordinates = update_coordinates model.coordinates (Vec3.scale delta model.velocity)
                     velocity = update_velocity model.velocity coordinates
@@ -132,10 +130,12 @@ view : Model -> Html Msg
 view model =
         div [ style "background-color" "black"] 
             [
-            input [ type_ "number",  placeholder "Scene speed" , value (String.fromFloat model.scene_speed), onInput ChangeRotationSpeed] []
-            ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
+            div [style "z-index" "1", style "position" "absolute"] [
+                input [ type_ "number",  placeholder "Scene speed" , value (String.fromFloat model.scene_speed), onInput ChangeRotationSpeed] []
+                ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
+            ]
             , WebGL.toHtml
-                [ width 2000, height 2000, style "display" "table", style "width" "700px", style "height" "700px", style "background-color" "black"
+                [ width 3000, height 2000, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
                 ]
                 (show_scene model.scene)
             ]

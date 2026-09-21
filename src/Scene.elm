@@ -91,7 +91,7 @@ generate_random_sphere n=
         --velocity = vec3 (0.00025*z + 0.000002 * (fmodBy 100 (n+163))) (-0.00012439*x - 0.000005 * (fmodBy 100 (n+345)) + 0.000001) (0.0001 * y + 0.0000009 * (fmodBy 100 (n+136)))  
         velocity = vec3 (0.00025 * x + 0.00010 * y + 0.00009 * z + 0.00003) ( 0.00009 * x + 0.00013 * y + 0.0000913423 *z + 0.00003) (0.0001 * (x+y+z) + 0.00003)
         rotation = vec3  (0.001*x) (0.001*y) (0.001*z) 
-        mesh = sphere_mesh (vec3 0 0 0) 0.1 250
+        mesh = sphere_mesh (vec3 0 0 0) 0.1 128
         rotation_spin_velocity = vec3 (0.0001 * x) (0.0001 * y ) (0.0001 * z)
     in 
     Object_data mesh coords rotation velocity rotation_spin_velocity
@@ -113,7 +113,7 @@ initialise_scene sphere_triangle_count =
             velocity = (vec3 0.0001 0.0001 0.0001), 
             rotation_spin_velocity =  (vec3 0.0 0.0005 0.00005)}
         dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
-        randoms = generate_random_spheres 1000
+        randoms = generate_random_spheres 1500
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
 

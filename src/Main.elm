@@ -20,6 +20,8 @@ import Meshes exposing (sphere_mesh)
 import Array
 
 import Scene exposing (Scene_Objects, initialise_scene, update_scene_movement, update_object_mesh, update_scene_sphere, show_scene)
+import Html exposing (p)
+import Html exposing (text)
 
 -- MAIN
 
@@ -60,6 +62,7 @@ type alias Model =
         --, sphere_mesh : WebGL.Mesh Vertex 
         , scene : Scene_Objects
         , keys : Keys
+        , frame_time: Float
     }
 
 init : () -> (Model, Cmd Msg)
@@ -69,7 +72,7 @@ init () =
         start_scene_speed = 5
         default_triangle_count = 300
     in 
-        ( {scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate ,triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
+        ( {frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate ,triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
         --sphere_mesh = (sphere_mesh (vec3 0 0 0) 1 default_triangle_count)}
 
 
@@ -121,7 +124,7 @@ update msg model =
                 let 
                     time_diff = delta * model.scene_speed 
                 in 
-                ({ model | scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
+                ({ model | frame_time = ((delta + (model.frame_time * 9)) /10) , scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             if newSpeed == "" then 
                 ( { model | scene_speed = 0} , Cmd.none) 
@@ -180,6 +183,7 @@ view model =
             div [style "z-index" "1", style "position" "absolute"] [
                 input [ type_ "number",  placeholder "Scene speed" , value (String.fromFloat model.scene_speed), onInput ChangeRotationSpeed] []
                 ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
+                , p [ style "color" "white"][ text (String.concat ["fps:" ,String.fromInt (round (1000/model.frame_time)), " , frame time (ms):", String.fromInt (round (model.frame_time)) ])]
             ]
             , WebGL.toHtml
                 [ width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"

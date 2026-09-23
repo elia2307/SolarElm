@@ -10,16 +10,19 @@ import Utils exposing (update_coordinates, update_velocity)
 import Html.Attributes exposing (coords)
 import Meshes exposing (pyramid_cube_mesh)
 import Array exposing (Array)
+import Shaders exposing (create_camera_uniform)
+import Math.Matrix4 as Mat4 exposing (Mat4)
 
 
 
-type alias Object_data = 
+type alias Object_data= 
     {   mesh : WebGL.Mesh Vertex
     , coordinates : Vec3
     , rotation : Vec3
     , velocity : Vec3
     , rotation_spin_velocity: Vec3
     }
+
 
 type alias Scene_Objects = {objects : Array(Object_data) }
 update_object_mesh : Object_data -> WebGL.Mesh Vertex -> Object_data
@@ -46,11 +49,11 @@ update_object_movement delta obj =
         { obj | coordinates = coords, velocity = velocity, rotation=rotation}  
 
 
-show_object : Vec3 -> Float -> Float -> Object_data -> WebGL.Entity 
-show_object camera_coodinates pitch yaw obj = 
+show_object : Mat4 -> Object_data -> WebGL.Entity 
+show_object camera_uniform obj = 
     let 
         global_transform = create_global_transform_matrix obj.coordinates obj.rotation 
-        uniforms = create_uniforms 0 global_transform camera_coodinates pitch yaw
+        uniforms = create_uniforms global_transform camera_uniform 
     in 
     show_mesh obj.mesh uniforms
 
@@ -113,7 +116,7 @@ initialise_scene sphere_triangle_count =
             velocity = (vec3 0.0001 0.0001 0.0001), 
             rotation_spin_velocity =  (vec3 0.0 0.0005 0.00005)}
         dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
-        randoms = generate_random_spheres 1250 --2000
+        randoms = generate_random_spheres 2000 --2000
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
 
@@ -128,6 +131,10 @@ update_scene_movement scene delta =
 
 
 show_scene  :  Vec3 -> Float -> Float -> Scene_Objects ->  List(WebGL.Entity) 
-show_scene camera_coordinates pitch yaw scene=Array.toList (Array.map (show_object camera_coordinates pitch yaw) scene.objects)  
+show_scene camera_coordinates pitch yaw scene=
+    let 
+        camera_uniform = create_camera_uniform pitch yaw camera_coordinates
+    in
+        Array.toList (Array.map (show_object camera_uniform) scene.objects)  
 
 

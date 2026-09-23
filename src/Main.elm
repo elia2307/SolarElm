@@ -22,6 +22,8 @@ import Array
 import Scene exposing (Scene_Objects, initialise_scene, update_scene_movement, update_object_mesh, update_scene_sphere, show_scene)
 import Html exposing (p)
 import Html exposing (text)
+import Dict exposing (keys)
+import Shaders exposing (create_camera_uniform)
 
 -- MAIN
 
@@ -48,11 +50,12 @@ type alias Keys =
     , right : Bool
     , space : Bool
     , ctrl : Bool
-    , shift : Bool}
+    , shift : Bool
+    , r: Bool}
 
 no_keys : Keys
 no_keys =
-    Keys False False False False False False False
+    Keys False False False False False False False False
 
 type alias Model =
     {   
@@ -104,6 +107,7 @@ update_keys isDown key keys =
         " " -> { keys | space = isDown}
         "Control" -> {keys | ctrl = isDown}
         "Shift" -> {keys | shift = isDown}
+        "r" -> {keys | r = isDown}
         _ -> let _ = Debug.log "key:" key in keys
  
 
@@ -137,7 +141,10 @@ update msg model =
                 let 
                     time_diff = delta * model.scene_speed 
                 in 
-                ({ model | frame_time = ((delta + (model.frame_time * 9)) /10) , scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
+                if model.keys.r then
+                    ({model | frame_time = (( delta + (model.frame_time * 9)) /10), camera_coordinates = (vec3 1 1 20) , camera_yaw = -90, camera_pitch = 0, scene = (update_scene_movement model.scene time_diff)} , Cmd.none)
+                else
+                    ({ model | frame_time = ((delta + (model.frame_time * 9)) /10) , scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             if newSpeed == "" then 
                 ( { model | scene_speed = 0} , Cmd.none) 

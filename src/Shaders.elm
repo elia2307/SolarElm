@@ -14,27 +14,45 @@ show_mesh mesh uniforms =
 
 
 type alias Uniforms =
-    { rotation : Mat4
-    , perspective : Mat4
+    {
+    perspective : Mat4
     , camera : Mat4
     , global_transform : Mat4
     }
 
 
 
-create_3d_rotation_matrix : Float -> Float -> Float -> Mat4
-create_3d_rotation_matrix roll pitch yaw= 
+create_3d_rotation_matrix_3steps : Float -> Float -> Float -> Mat4
+create_3d_rotation_matrix_3steps roll pitch yaw= 
     let 
         rx = Mat4.makeRotate (roll) (vec3 1 0 0)
         ry = Mat4.makeRotate (pitch) (vec3 0 1 0)
         rz = Mat4.makeRotate (yaw) (vec3 0 0 1)
     in 
     Mat4.mul (Mat4.mul rz ry) rx 
-        
+
+-- formula from https://en.wikipedia.org/wiki/Rotation_matrix
+create_3d_rotation_matrix_1step: Float ->  Float -> Float -> Mat4 
+create_3d_rotation_matrix_1step roll pitch yaw = 
+    let 
+        cosa = cos yaw
+        sina = sin yaw
+        cosb = cos pitch
+        sinb = sin pitch
+        cosy = cos roll
+        siny = sin roll
+        c1 = vec3 (cosa * cosb) (sina * cosb) (-sinb)
+        c2 = vec3 ((cosa * sinb * siny) - (sina * cosy)) ((sina * sinb * siny) + (cosa * cosy)) (cosb * sinb)
+        c3 = vec3 ((cosa * sinb * cosy) + (sina * siny)) ((sina * sinb * cosy) - (cosa * siny)) (cosb * cosy)
+        --_ = Debug.log "(makeBasis,3step)" ( (Mat4.makeBasis c1 c2 c3), (create_3d_rotation_matrix_3steps roll pitch yaw))
+    in 
+    Mat4.makeBasis c1 c2 c3
+    --create_3d_rotation_matrix_3steps roll pitch yaw 
+
 
 create_global_transform_matrix : Vec3 -> Vec3  -> Mat4
 create_global_transform_matrix translation rotation=
-    Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
+    Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     
 
 
@@ -49,23 +67,11 @@ create_camera_uniform pitch yaw camera_coordinates =
     in 
     Mat4.makeLookAt camera_coordinates looking_at (vec3 0 1 0)
 
-create_uniforms : Float -> Mat4  -> Vec3-> Float -> Float -> Uniforms
-create_uniforms angle global_transform camera_coordinates pitch yaw=
-    let 
-        looking_at = Vec3.add camera_coordinates (vec3 0 -1 -10)
-        -- orignally 0,0,0 but with movement think this is correct
-    in 
-    { rotation =
-        Mat4.mul
-        (Mat4.makeRotate (3 * angle) (vec3 0 1 0))
-        (Mat4.makeRotate (2 * angle) (vec3 1 0 0))
-        , perspective = Mat4.makePerspective 45 1 0.01 100
-        -- makeLookat 3 args, first camera coord, 2nd center of focused object, 3rd  up direction for camera)
-        -- 
-        --, camera = Mat4.makeLookAt (camera_coordinates) looking_at (vec3 0 1 0) --up would be vec3 0 1 0
-        , camera = create_camera_uniform pitch yaw camera_coordinates
-
-
+create_uniforms : Mat4  -> Mat4 -> Uniforms
+create_uniforms global_transform camera_uniform=
+    { 
+        perspective = Mat4.makePerspective 45 1 0.01 100
+        , camera = camera_uniform
         , global_transform = global_transform
     }
 
@@ -82,11 +88,10 @@ vertexShader =
         attribute vec3 color;
         uniform mat4 perspective;
         uniform mat4 camera;
-        uniform mat4 rotation;
         varying vec3 vcolor;
         uniform mat4 global_transform;
         void main () {
-            gl_Position = perspective * camera * rotation * global_transform * vec4((position), 1.0);
+            gl_Position = perspective * camera * global_transform * vec4((position), 1.0);
             vcolor = color;
         }
     |]

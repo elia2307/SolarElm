@@ -262,16 +262,16 @@ sphere_mesh centrePoint radius no_triangles = WebGL.triangles <|List.concat <|
         let 
             default_triangle = draw_triangles (no_triangles//8)
             start_triangle = (( vec3 -1 -1 0), (vec3 1 -1 0), (vec3 0 1 0)) 
-            _ = Debug.log "centrePoint:" centrePoint
-            _ = Debug.log "radius:" radius
+            --_ = Debug.log "centrePoint:" centrePoint
+            --_ = Debug.log "radius:" radius
             north_pole = Vec3.add (vec3 0 radius 0) centrePoint 
             south_pole = Vec3.add (vec3 0 -radius 0) centrePoint
             east_pole = Vec3.add (vec3 radius 0 0) centrePoint
             west_pole = Vec3.add (vec3 -radius 0 0) centrePoint
             front_pole = Vec3.add (vec3 0 0 radius) centrePoint
             back_pole = Vec3.add (vec3 0 0 -radius) centrePoint
-            poles = [north_pole,south_pole,east_pole,west_pole,front_pole,back_pole]
-            _ = Debug.log "poles:" poles
+            --poles = [north_pole,south_pole,east_pole,west_pole,front_pole,back_pole]
+            --_ = Debug.log "poles:" poles
 
             points = List.concat
                 [ 

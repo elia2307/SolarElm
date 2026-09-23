@@ -13,9 +13,10 @@ import Html exposing (Html, input, div)
 import Html.Events exposing (onInput)
 import Html.Attributes exposing (width, height, style, value, placeholder, type_)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import Json.Decode as Decode
+
 import WebGL
 import Meshes exposing (sphere_mesh)
-import Utils exposing (update_coordinates, update_velocity)
 import Array
 
 import Scene exposing (Scene_Objects, initialise_scene, update_scene_movement, update_object_mesh, update_scene_sphere, show_scene)
@@ -34,32 +35,41 @@ main =
     }
 
 
-
 -- MODEL
 
 
 
+type alias Keys =
+    { up : Bool
+    , left : Bool
+    , down : Bool
+    , right : Bool
+    , space : Bool
+    , ctrl : Bool
+    }
+
+no_keys : Keys
+no_keys =
+    Keys False False False False False False
+
 type alias Model =
-    {   angle : Float
-        ,scene_speed : Float 
-        ,coordinates : Vec3
-        ,velocity : Vec3
+    {   
+        scene_speed : Float 
+        ,camera_coordinates : Vec3
         , triangle_count : Int
         --, sphere_mesh : WebGL.Mesh Vertex 
         , scene : Scene_Objects
+        , keys : Keys
     }
-
 
 init : () -> (Model, Cmd Msg)
 init () =
     let 
-        initial_velocity = vec3 0.001 0.001 0.001
-        initial_coordinate = vec3 0 0 0 
+        initial_coordinate = vec3 0 1 20 
         start_scene_speed = 5
-        start_angle = 0.1
         default_triangle_count = 300
     in 
-        ( {scene_speed = start_scene_speed ,angle = start_angle,  coordinates = initial_coordinate , velocity= initial_velocity, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count)} ,  Cmd.none )
+        ( {scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate ,triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
         --sphere_mesh = (sphere_mesh (vec3 0 0 0) 1 default_triangle_count)}
 
 
@@ -68,7 +78,32 @@ init () =
 
 
 type Msg
-    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String
+    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String | KeyChanged Bool String
+
+
+update_keys : Bool -> String -> Keys -> Keys
+update_keys isDown key keys = 
+    case key of 
+        "ArrowUp" -> { keys | up = isDown } 
+        "ArrowLeft" -> {keys | left = isDown}
+        "ArrowRight" -> {keys | right = isDown}
+        "ArrowDown" -> {keys | down = isDown}
+        " " -> { keys | space = isDown}
+        "Control" -> {keys | ctrl = isDown}
+        _ -> let _ = Debug.log "key:" key in keys
+ 
+
+update_coordinates : Keys -> Vec3 -> Vec3 
+update_coordinates keys coordinates =
+    let 
+        x_diff = (if keys.left  then -1 else 0) + (if keys.right then 1 else 0)
+        z_diff = (if keys.down then  -1 else 0 ) + (if keys.up then 1 else 0)
+        y_diff = (if keys.ctrl then -1 else 0) + (if keys.space then 1 else 0)
+        _ = Debug.log "coord: " coordinates
+    in 
+    vec3 ((Vec3.getX coordinates) + x_diff) ((Vec3.getY coordinates)+y_diff) ((Vec3.getZ coordinates) + z_diff)
+    
+    
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -76,11 +111,9 @@ update msg model =
     case msg of
         TimeDelta delta ->
                 let 
-                    coordinates = update_coordinates model.coordinates (Vec3.scale delta model.velocity)
-                    velocity = update_velocity model.velocity coordinates
                     time_diff = delta * model.scene_speed 
                 in 
-                ({ model | scene = (update_scene_movement model.scene time_diff),  coordinates= coordinates, velocity = velocity , angle = model.angle + delta  * (model.scene_speed / 5000) }, Cmd.none )
+                ({ model | scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             if newSpeed == "" then 
                 ( { model | scene_speed = 0} , Cmd.none) 
@@ -109,6 +142,8 @@ update msg model =
                             in
 
                             ( {model | triangle_count = count, scene = scene}, Cmd.none)
+        KeyChanged isDown key -> 
+            ({ model |  keys = update_keys isDown key model.keys} , Cmd.none)
 
 
 
@@ -120,7 +155,11 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Events.onAnimationFrameDelta TimeDelta
+    Sub.batch 
+        [Events.onAnimationFrameDelta TimeDelta
+        ,Events.onKeyUp (Decode.map (KeyChanged False) (Decode.field "key" Decode.string))
+        , Events.onKeyDown (Decode.map (KeyChanged True) (Decode.field "key" Decode.string))
+        ]
 
 
 -- VIEW
@@ -135,9 +174,9 @@ view model =
                 ,input [ type_ "number", placeholder "Triangle count" , value (String.fromInt model.triangle_count), onInput ChangeTriangleCount] []
             ]
             , WebGL.toHtml
-                [ width 3000, height 2000, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
+                [ width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
                 ]
-                (show_scene model.scene)
+                (show_scene model.camera_coordinates model.scene)
             ]
 
 

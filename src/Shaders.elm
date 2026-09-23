@@ -37,14 +37,20 @@ create_global_transform_matrix translation rotation=
     Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     
 
-create_uniforms : Float -> Mat4  -> Uniforms
-create_uniforms angle global_transform =
+create_uniforms : Float -> Mat4  -> Vec3-> Uniforms
+create_uniforms angle global_transform camera_coordinates =
+    let 
+        looking_at = Vec3.add camera_coordinates (vec3 0 -1 -10)
+        -- orignally 0,0,0 but with movement think this is correct
+    in 
     { rotation =
         Mat4.mul
         (Mat4.makeRotate (3 * angle) (vec3 0 1 0))
         (Mat4.makeRotate (2 * angle) (vec3 1 0 0))
         , perspective = Mat4.makePerspective 45 1 0.01 100
-        , camera = Mat4.makeLookAt (vec3 0 0 9) (vec3 0 0 0) (vec3 0 1 0)
+        -- makeLookat 3 args, first camera coord, 2nd center of focused object, 3rd  up direction for camera)
+        -- 
+        , camera = Mat4.makeLookAt (camera_coordinates) looking_at (vec3 0 0 1)
         , global_transform = global_transform
     }
 

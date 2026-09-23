@@ -11,6 +11,7 @@ import Browser
 import Browser.Events as Events
 import Html exposing (Html, input, div)
 import Html.Events exposing (onInput)
+import Html.Events exposing (on)
 import Html.Attributes exposing (width, height, style, value, placeholder, type_)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Json.Decode as Decode
@@ -23,7 +24,6 @@ import Scene exposing (Scene_Objects, initialise_scene, update_scene_movement, u
 import Html exposing (p)
 import Html exposing (text)
 import Dict exposing (keys)
-import Shaders exposing (create_camera_uniform)
 
 -- MAIN
 
@@ -51,11 +51,10 @@ type alias Keys =
     , space : Bool
     , ctrl : Bool
     , shift : Bool
-    , r: Bool}
-
+    }
 no_keys : Keys
 no_keys =
-    Keys False False False False False False False False
+    Keys False False False False False False False 
 
 type alias Model =
     {   
@@ -64,10 +63,10 @@ type alias Model =
         , camera_pitch : Float
         , camera_yaw : Float 
         , triangle_count : Int
-        --, sphere_mesh : WebGL.Mesh Vertex 
         , scene : Scene_Objects
         , keys : Keys
         , frame_time: Float
+        , fov: Float
     }
 
 init : () -> (Model, Cmd Msg)
@@ -77,16 +76,14 @@ init () =
         start_scene_speed = 5
         default_triangle_count = 300
     in 
-        ( {frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate , camera_pitch =0, camera_yaw = -90, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
-        --sphere_mesh = (sphere_mesh (vec3 0 0 0) 1 default_triangle_count)}
-
+        ( {fov= 45, frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate , camera_pitch =0, camera_yaw = -90, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
 
 
 -- UPDATE
 
 
 type Msg
-    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String | KeyChanged Bool String | MouseMovement Point
+    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String | KeyChanged Bool String | MouseMovement Point | MouseScroll Bool
 
 
 update_keys : Bool -> String -> Keys -> Keys
@@ -107,7 +104,6 @@ update_keys isDown key keys =
         " " -> { keys | space = isDown}
         "Control" -> {keys | ctrl = isDown}
         "Shift" -> {keys | shift = isDown}
-        "r" -> {keys | r = isDown}
         _ -> let _ = Debug.log "key:" key in keys
  
 
@@ -141,10 +137,7 @@ update msg model =
                 let 
                     time_diff = delta * model.scene_speed 
                 in 
-                if model.keys.r then
-                    ({model | frame_time = (( delta + (model.frame_time * 9)) /10), camera_coordinates = (vec3 1 1 20) , camera_yaw = -90, camera_pitch = 0, scene = (update_scene_movement model.scene time_diff)} , Cmd.none)
-                else
-                    ({ model | frame_time = ((delta + (model.frame_time * 9)) /10) , scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
+                ({ model | frame_time = ((delta + (model.frame_time * 9)) /10) , scene = (update_scene_movement model.scene time_diff), camera_coordinates = (update_coordinates model.keys model.camera_coordinates)}, Cmd.none )
         ChangeRotationSpeed newSpeed ->
             if newSpeed == "" then 
                 ( { model | scene_speed = 0} , Cmd.none) 
@@ -174,12 +167,24 @@ update msg model =
 
                             ( {model | triangle_count = count, scene = scene}, Cmd.none)
         KeyChanged isDown key -> 
-            ({ model |  keys = update_keys isDown key model.keys} , Cmd.none)
+            if (key == "+" || key == "=") && isDown then 
+                ({ model | fov= clamp 1 179 (model.fov * 0.9)}, Cmd.none)
+            else if (key == "-" || key == "_") && isDown then 
+                ({ model | fov = clamp 1 179 (model.fov *1.1)}, Cmd.none)
+            else if (key == "r" || key == "R" )&& isDown then 
+                ({model |camera_coordinates = (vec3 1 1 20) , fov = 45, camera_yaw = -90, camera_pitch = 0} , Cmd.none)
+            else 
+                ({ model |  keys = update_keys isDown key model.keys} , Cmd.none)
         MouseMovement point -> 
             if not model.keys.shift then 
                 ({model | camera_pitch = (update_camera_angle model.camera_pitch -point.y  180) ,camera_yaw = (update_camera_angle model.camera_yaw point.x -1)} , Cmd.none)
             else 
                 ( model, Cmd.none)
+        MouseScroll isUp ->
+            let  
+                new_fov = clamp 1 179 (model.fov  + (if isUp then -5 else 5)) 
+            in 
+            ({ model | fov = new_fov} , Cmd.none)
 
 
 
@@ -190,8 +195,6 @@ update msg model =
 
 type alias Point = {x: Float , y: Float}
 
-point_to_pointmsg : Float -> Float -> Msg
-point_to_pointmsg x y = MouseMovement (Point x y)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -199,7 +202,7 @@ subscriptions _ =
         [Events.onAnimationFrameDelta TimeDelta
         ,Events.onKeyUp (Decode.map (KeyChanged False) (Decode.field "key" Decode.string))
         , Events.onKeyDown (Decode.map (KeyChanged True) (Decode.field "key" Decode.string))
-        , Events.onMouseMove (Decode.map2 point_to_pointmsg (Decode.field "movementX" Decode.float) (Decode.field "movementY" Decode.float)) 
+        , Events.onMouseMove (Decode.map2 (\x y -> MouseMovement (Point x y)) (Decode.field "movementX" Decode.float) (Decode.field "movementY" Decode.float)) 
         ]
 
 
@@ -208,7 +211,7 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-        div [ style "background-color" "black"] 
+        div [  on "wheel" (Decode.map (\v -> MouseScroll ( v > 0)) (Decode.field "wheelDelta" Decode.int)) , style "background-color" "black"] 
             [
             div [style "z-index" "1", style "position" "absolute"] [
                 input [ type_ "number",  placeholder "Scene speed" , value (String.fromFloat model.scene_speed), onInput ChangeRotationSpeed] []
@@ -218,7 +221,7 @@ view model =
             , WebGL.toHtml
                 [ width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
                 ]
-                (show_scene model.camera_coordinates model.camera_pitch model.camera_yaw model.scene)
+                (show_scene model.camera_coordinates model.camera_pitch model.camera_yaw model.fov model.scene)
             ]
 
 

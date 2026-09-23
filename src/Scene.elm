@@ -12,6 +12,7 @@ import Meshes exposing (pyramid_cube_mesh)
 import Array exposing (Array)
 import Shaders exposing (create_camera_uniform)
 import Math.Matrix4 as Mat4 exposing (Mat4)
+import Shaders exposing (create_perspective_matrix)
 
 
 
@@ -49,11 +50,11 @@ update_object_movement delta obj =
         { obj | coordinates = coords, velocity = velocity, rotation=rotation}  
 
 
-show_object : Mat4 -> Object_data -> WebGL.Entity 
-show_object camera_uniform obj = 
+show_object : Mat4 -> Mat4 -> Object_data -> WebGL.Entity 
+show_object camera_uniform perspective_uniform obj = 
     let 
-        global_transform = create_global_transform_matrix obj.coordinates obj.rotation 
-        uniforms = create_uniforms global_transform camera_uniform 
+        global_transform = create_global_transform_matrix obj.coordinates obj.rotation
+        uniforms = create_uniforms global_transform camera_uniform perspective_uniform 
     in 
     show_mesh obj.mesh uniforms
 
@@ -76,8 +77,8 @@ fix_nan num fallback =
     else 
         num
 
-generate_random_sphere : Float -> Object_data
-generate_random_sphere n= 
+generate_random_sphere : Float -> Int -> Object_data
+generate_random_sphere n vertices= 
     let 
         p = 7753757725325377
         mod = modBy p ((floor ((n+133) * 125959)) * 2245849783) 
@@ -94,18 +95,18 @@ generate_random_sphere n=
         --velocity = vec3 (0.00025*z + 0.000002 * (fmodBy 100 (n+163))) (-0.00012439*x - 0.000005 * (fmodBy 100 (n+345)) + 0.000001) (0.0001 * y + 0.0000009 * (fmodBy 100 (n+136)))  
         velocity = vec3 (0.00025 * x + 0.00010 * y + 0.00009 * z + 0.00003) ( 0.00009 * x + 0.00013 * y + 0.0000913423 *z + 0.00003) (0.0001 * (x+y+z) + 0.00003)
         rotation = vec3  (0.001*x) (0.001*y) (0.001*z) 
-        mesh = sphere_mesh (vec3 0 0 0) 0.1 200
+        mesh = sphere_mesh (vec3 0 0 0) 0.1 vertices
         rotation_spin_velocity = vec3 (0.0001 * x) (0.0001 * y ) (0.0001 * z)
     in 
     Object_data mesh coords rotation velocity rotation_spin_velocity
 
 
-generate_random_spheres : Int -> List(Object_data)
-generate_random_spheres number =
+generate_random_spheres : Int -> Int -> List(Object_data)
+generate_random_spheres number vertices =
     if number <= 0 then
         []
     else 
-        List.append (generate_random_spheres (number - 1)) [generate_random_sphere (toFloat (number+1))]
+        List.append (generate_random_spheres (number - 1) vertices) [generate_random_sphere (toFloat (number+1)) vertices]
     
 
 
@@ -116,7 +117,7 @@ initialise_scene sphere_triangle_count =
             velocity = (vec3 0.0001 0.0001 0.0001), 
             rotation_spin_velocity =  (vec3 0.0 0.0005 0.00005)}
         dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
-        randoms = generate_random_spheres 2000 --2000
+        randoms = generate_random_spheres 2000 128
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
 
@@ -130,11 +131,12 @@ update_scene_movement scene delta =
     --Scene_Objects (update_object_movement scene.sphere delta) (update_object_movement scene.dia delta)  
 
 
-show_scene  :  Vec3 -> Float -> Float -> Scene_Objects ->  List(WebGL.Entity) 
-show_scene camera_coordinates pitch yaw scene=
+show_scene  :  Vec3 -> Float -> Float -> Float -> Scene_Objects ->  List(WebGL.Entity) 
+show_scene camera_coordinates pitch yaw fov scene=
     let 
-        camera_uniform = create_camera_uniform pitch yaw camera_coordinates
+        camera_uniform = create_camera_uniform pitch yaw camera_coordinates 
+        perspective = create_perspective_matrix fov
     in
-        Array.toList (Array.map (show_object camera_uniform) scene.objects)  
+        Array.toList (Array.map (show_object camera_uniform perspective) scene.objects)  
 
 

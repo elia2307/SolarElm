@@ -51,13 +51,13 @@ create_3d_rotation_matrix_1step roll pitch yaw =
 
 
 create_global_transform_matrix : Vec3 -> Vec3  -> Mat4
-create_global_transform_matrix translation rotation=
+create_global_transform_matrix translation rotation =
     Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     
 
 
 create_camera_uniform : Float -> Float -> Vec3 -> Mat4 
-create_camera_uniform pitch yaw camera_coordinates = 
+create_camera_uniform pitch yaw camera_coordinates= 
     let 
         yaw_d = degrees yaw
         pitch_d = degrees pitch
@@ -67,10 +67,14 @@ create_camera_uniform pitch yaw camera_coordinates =
     in 
     Mat4.makeLookAt camera_coordinates looking_at (vec3 0 1 0)
 
-create_uniforms : Mat4  -> Mat4 -> Uniforms
-create_uniforms global_transform camera_uniform=
+create_perspective_matrix : Float -> Mat4 
+create_perspective_matrix fov = Mat4.makePerspective fov 1 0.01 100 
+
+
+create_uniforms : Mat4  -> Mat4 -> Mat4 -> Uniforms
+create_uniforms global_transform camera_uniform perspective_uniform=
     { 
-        perspective = Mat4.makePerspective 45 1 0.01 100
+        perspective = perspective_uniform
         , camera = camera_uniform
         , global_transform = global_transform
     }

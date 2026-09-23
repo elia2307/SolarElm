@@ -37,8 +37,20 @@ create_global_transform_matrix translation rotation=
     Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     
 
-create_uniforms : Float -> Mat4  -> Vec3-> Uniforms
-create_uniforms angle global_transform camera_coordinates =
+
+create_camera_uniform : Float -> Float -> Vec3 -> Mat4 
+create_camera_uniform pitch yaw camera_coordinates = 
+    let 
+        yaw_d = degrees yaw
+        pitch_d = degrees pitch
+        --_ = Debug.log "coordinate,yaw,pitch:" (camera_coordinates,pitch,yaw)
+        rotation_vec = vec3 ((Basics.cos yaw_d) * (Basics.cos pitch_d)) (Basics.sin pitch_d) ((Basics.sin yaw_d) * (Basics.cos pitch_d))
+        looking_at = Vec3.add camera_coordinates rotation_vec
+    in 
+    Mat4.makeLookAt camera_coordinates looking_at (vec3 0 1 0)
+
+create_uniforms : Float -> Mat4  -> Vec3-> Float -> Float -> Uniforms
+create_uniforms angle global_transform camera_coordinates pitch yaw=
     let 
         looking_at = Vec3.add camera_coordinates (vec3 0 -1 -10)
         -- orignally 0,0,0 but with movement think this is correct
@@ -50,7 +62,10 @@ create_uniforms angle global_transform camera_coordinates =
         , perspective = Mat4.makePerspective 45 1 0.01 100
         -- makeLookat 3 args, first camera coord, 2nd center of focused object, 3rd  up direction for camera)
         -- 
-        , camera = Mat4.makeLookAt (camera_coordinates) looking_at (vec3 0 0 1)
+        --, camera = Mat4.makeLookAt (camera_coordinates) looking_at (vec3 0 1 0) --up would be vec3 0 1 0
+        , camera = create_camera_uniform pitch yaw camera_coordinates
+
+
         , global_transform = global_transform
     }
 

@@ -48,16 +48,18 @@ type alias Keys =
     , right : Bool
     , space : Bool
     , ctrl : Bool
-    }
+    , shift : Bool}
 
 no_keys : Keys
 no_keys =
-    Keys False False False False False False
+    Keys False False False False False False False
 
 type alias Model =
     {   
         scene_speed : Float 
         ,camera_coordinates : Vec3
+        , camera_pitch : Float
+        , camera_yaw : Float 
         , triangle_count : Int
         --, sphere_mesh : WebGL.Mesh Vertex 
         , scene : Scene_Objects
@@ -68,11 +70,11 @@ type alias Model =
 init : () -> (Model, Cmd Msg)
 init () =
     let 
-        initial_coordinate = vec3 0 1 20 
+        initial_coordinate = vec3 1 1 20 
         start_scene_speed = 5
         default_triangle_count = 300
     in 
-        ( {frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate ,triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
+        ( {frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate , camera_pitch =0, camera_yaw = -90, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
         --sphere_mesh = (sphere_mesh (vec3 0 0 0) 1 default_triangle_count)}
 
 
@@ -81,7 +83,7 @@ init () =
 
 
 type Msg
-    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String | KeyChanged Bool String
+    = TimeDelta Float | ChangeRotationSpeed String | ChangeTriangleCount String | KeyChanged Bool String | MouseMovement Point
 
 
 update_keys : Bool -> String -> Keys -> Keys
@@ -101,6 +103,7 @@ update_keys isDown key keys =
         "S" -> {keys | down = isDown}
         " " -> { keys | space = isDown}
         "Control" -> {keys | ctrl = isDown}
+        "Shift" -> {keys | shift = isDown}
         _ -> let _ = Debug.log "key:" key in keys
  
 
@@ -108,14 +111,24 @@ update_coordinates : Keys -> Vec3 -> Vec3
 update_coordinates keys coordinates =
     let 
         x_diff = (if keys.left  then -1 else 0) + (if keys.right then 1 else 0)
-        z_diff = (if keys.down then  -1 else 0 ) + (if keys.up then 1 else 0)
+        --for whatever reason z_diff needs to be inversed for movement
+        z_diff = -((if keys.down then  -1 else 0 ) + (if keys.up then 1 else 0))
         y_diff = (if keys.ctrl then -1 else 0) + (if keys.space then 1 else 0)
-        _ = Debug.log "coord: " coordinates
+        --_ = Debug.log "coord: " coordinates
     in 
     vec3 ((Vec3.getX coordinates) + x_diff) ((Vec3.getY coordinates)+y_diff) ((Vec3.getZ coordinates) + z_diff)
     
     
-
+update_camera_angle : Float -> Float -> Float-> Float 
+update_camera_angle angle movement limit = 
+    let 
+        angle_unit = 0.25 
+        angle_diff = angle_unit * movement 
+    in 
+    if limit == -1 then 
+        angle + angle_diff
+    else 
+        clamp  -limit limit (angle + angle_diff)
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -155,6 +168,11 @@ update msg model =
                             ( {model | triangle_count = count, scene = scene}, Cmd.none)
         KeyChanged isDown key -> 
             ({ model |  keys = update_keys isDown key model.keys} , Cmd.none)
+        MouseMovement point -> 
+            if not model.keys.shift then 
+                ({model | camera_pitch = (update_camera_angle model.camera_pitch -point.y  180) ,camera_yaw = (update_camera_angle model.camera_yaw point.x -1)} , Cmd.none)
+            else 
+                ( model, Cmd.none)
 
 
 
@@ -163,6 +181,10 @@ update msg model =
 
 -- SUBSCRIPTIONS
 
+type alias Point = {x: Float , y: Float}
+
+point_to_pointmsg : Float -> Float -> Msg
+point_to_pointmsg x y = MouseMovement (Point x y)
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -170,6 +192,7 @@ subscriptions _ =
         [Events.onAnimationFrameDelta TimeDelta
         ,Events.onKeyUp (Decode.map (KeyChanged False) (Decode.field "key" Decode.string))
         , Events.onKeyDown (Decode.map (KeyChanged True) (Decode.field "key" Decode.string))
+        , Events.onMouseMove (Decode.map2 point_to_pointmsg (Decode.field "movementX" Decode.float) (Decode.field "movementY" Decode.float)) 
         ]
 
 
@@ -188,7 +211,7 @@ view model =
             , WebGL.toHtml
                 [ width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
                 ]
-                (show_scene model.camera_coordinates model.scene)
+                (show_scene model.camera_coordinates model.camera_pitch model.camera_yaw model.scene)
             ]
 
 

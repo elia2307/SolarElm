@@ -46,11 +46,11 @@ update_object_movement delta obj =
         { obj | coordinates = coords, velocity = velocity, rotation=rotation}  
 
 
-show_object : Vec3 -> Object_data -> WebGL.Entity 
-show_object camera_coodinates obj = 
+show_object : Vec3 -> Float -> Float -> Object_data -> WebGL.Entity 
+show_object camera_coodinates pitch yaw obj = 
     let 
         global_transform = create_global_transform_matrix obj.coordinates obj.rotation 
-        uniforms = create_uniforms 0 global_transform camera_coodinates
+        uniforms = create_uniforms 0 global_transform camera_coodinates pitch yaw
     in 
     show_mesh obj.mesh uniforms
 
@@ -113,7 +113,7 @@ initialise_scene sphere_triangle_count =
             velocity = (vec3 0.0001 0.0001 0.0001), 
             rotation_spin_velocity =  (vec3 0.0 0.0005 0.00005)}
         dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
-        randoms = generate_random_spheres 2000 --2000
+        randoms = generate_random_spheres 1250 --2000
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
 
@@ -127,7 +127,7 @@ update_scene_movement scene delta =
     --Scene_Objects (update_object_movement scene.sphere delta) (update_object_movement scene.dia delta)  
 
 
-show_scene  :  Vec3 -> Scene_Objects -> List(WebGL.Entity) 
-show_scene camera_coordinates scene=Array.toList (Array.map (show_object camera_coordinates) scene.objects)  
+show_scene  :  Vec3 -> Float -> Float -> Scene_Objects ->  List(WebGL.Entity) 
+show_scene camera_coordinates pitch yaw scene=Array.toList (Array.map (show_object camera_coordinates pitch yaw) scene.objects)  
 
 

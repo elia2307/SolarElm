@@ -22,8 +22,8 @@ type alias Uniforms =
 
 
 
-create_3d_rotation_matrix_3steps : Float -> Float -> Float -> Mat4
-create_3d_rotation_matrix_3steps roll pitch yaw= 
+create_3d_rotation_matrix_3step : Float -> Float -> Float -> Mat4
+create_3d_rotation_matrix_3step roll pitch yaw= 
     let 
         rx = Mat4.makeRotate (roll) (vec3 1 0 0)
         ry = Mat4.makeRotate (pitch) (vec3 0 1 0)
@@ -41,9 +41,17 @@ create_3d_rotation_matrix_1step roll pitch yaw =
         sinb = sin pitch
         cosy = cos roll
         siny = sin roll
-        c1 = vec3 (cosa * cosb) (sina * cosb) (-sinb)
-        c2 = vec3 ((cosa * sinb * siny) - (sina * cosy)) ((sina * sinb * siny) + (cosa * cosy)) (cosb * sinb)
-        c3 = vec3 ((cosa * sinb * cosy) + (sina * siny)) ((sina * sinb * cosy) - (cosa * siny)) (cosb * cosy)
+        --c1 = vec3 (cosa * cosb) (sina * cosb) (-sinb)
+        --c2 = vec3 ((cosa * sinb * siny) - (sina * cosy)) ((sina * sinb * siny) + (cosa * cosy)) (cosb * sinb)
+        --c3 = vec3 ((cosa * sinb * cosy) + (sina * siny)) 
+            --((sina * sinb * cosy) - (cosa * siny)) 
+            --(cosb * cosy)
+        c1 = vec3 (cosa * cosb) 
+            ((cosa * sinb * siny) - (sina * cosy)) 
+            ((cosa * sinb * cosy) + (sina * siny))
+        c2 = vec3 (sina * cosb) ((sina * sinb * siny) + (cosa * cosy)) ((sina * sinb * cosy) - (cosa * siny))
+        c3 = vec3 -sinb (cosb * siny) (cosb * cosy)
+        --_ = Debug.log "(c1,c2,c3) , mat: " ((c1,c2,c3) , (Mat4.makeBasis c1 c2 c3))
         --_ = Debug.log "(makeBasis,3step)" ( (Mat4.makeBasis c1 c2 c3), (create_3d_rotation_matrix_3steps roll pitch yaw))
     in 
     Mat4.makeBasis c1 c2 c3
@@ -52,6 +60,9 @@ create_3d_rotation_matrix_1step roll pitch yaw =
 
 create_global_transform_matrix : Vec3 -> Vec3  -> Mat4
 create_global_transform_matrix translation rotation =
+    --let 
+    --    _ = Debug.log "3 step and 1 step:" (create_3d_rotation_matrix_3step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation),  create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
+    --in 
     Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     
 
@@ -66,9 +77,11 @@ create_camera_uniform pitch yaw camera_coordinates=
         looking_at = Vec3.add camera_coordinates rotation_vec
     in 
     Mat4.makeLookAt camera_coordinates looking_at (vec3 0 1 0)
+    --Mat4.makeLookAt (camera_coordinates) (Vec3.add camera_coordinates (vec3 0 -1 -10)) (vec3 0 1 0)
 
 create_perspective_matrix : Float -> Mat4 
-create_perspective_matrix fov = Mat4.makePerspective fov 1 0.01 100 
+-- fov, aspect ratio , znear , zfar was (1 0.01 100) 
+create_perspective_matrix fov = Mat4.makePerspective fov (16/9) 0.01 100 
 
 
 create_uniforms : Mat4  -> Mat4 -> Mat4 -> Uniforms

@@ -1,12 +1,5 @@
 module Main exposing (..)
 
--- Render a spinning cube.
---
--- Dependencies:
---   elm install elm-explorations/linear-algebra
---   elm install elm-explorations/webgl
---
-
 import Browser
 import Browser.Events as Events
 import Html exposing (Html, input, div)
@@ -74,9 +67,9 @@ init () =
     let 
         initial_coordinate = vec3 1 1 20 
         start_scene_speed = 5
-        default_triangle_count = 300
+        default_triangle_count = 3000
     in 
-        ( {fov= 45, frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate , camera_pitch =0, camera_yaw = -90, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
+        ( {fov= 30, frame_time = 0.01, scene_speed = start_scene_speed ,camera_coordinates = initial_coordinate , camera_pitch =0, camera_yaw = -90, triangle_count=default_triangle_count, scene= (initialise_scene default_triangle_count) , keys = no_keys} ,  Cmd.none )
 
 
 -- UPDATE
@@ -129,6 +122,8 @@ update_camera_angle angle movement limit =
         angle + angle_diff
     else 
         clamp  -limit limit (angle + angle_diff)
+
+
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =

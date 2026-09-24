@@ -125,6 +125,17 @@ initialise_scene sphere_triangle_count =
 update_scene_sphere : Scene_Objects -> Object_data -> Scene_Objects
 update_scene_sphere scene sphere = { objects = (Array.set 0 sphere scene.objects)}  
 
+set_scene_object_coord : Scene_Objects -> Int -> Vec3 -> Scene_Objects
+set_scene_object_coord scene index coord = 
+    case (Array.get index scene.objects) of 
+        Nothing -> 
+            scene 
+        Just object -> 
+            let 
+                new_obj = { object | coordinates = coord} 
+            in 
+            Scene_Objects (Array.set index new_obj scene.objects) 
+
 
 update_scene_movement : Scene_Objects -> Float -> Scene_Objects 
 update_scene_movement scene delta = 

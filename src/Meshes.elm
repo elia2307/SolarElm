@@ -132,8 +132,9 @@ pyramid_cube_mesh centrePoint size =
     in 
         WebGL.triangles <| List.concat <|
             [
-                cube_mesh x y z size
-                ,pyramid_mesh rft rfb lfb lft (vec3 0 sizeP 0)
+                -- cube mesh not needed as pyramids hide cube anyways
+                --cube_mesh x y z size
+                pyramid_mesh rft rfb lfb lft (vec3 0 sizeP 0)
                 , pyramid_mesh rft lft lbt rbt  (vec3 0 0 sizeP)
                 , pyramid_mesh rfb lfb lbb rbb (vec3 0 0 -sizeP) 
                 , pyramid_mesh lft lfb lbb lbt  (vec3 -sizeP 0 0)

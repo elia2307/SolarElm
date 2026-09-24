@@ -63,20 +63,24 @@ create_global_transform_matrix translation rotation =
     --let 
     --    _ = Debug.log "3 step and 1 step:" (create_3d_rotation_matrix_3step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation),  create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
     --in 
-    Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation))
-    
+    Mat4.mul (Mat4.makeTranslate translation) (create_3d_rotation_matrix_1step (Vec3.getX rotation) (Vec3.getY rotation) (Vec3.getZ rotation)) 
+
+
+get_camera_dir : Float -> Float -> Vec3 
+get_camera_dir pitch yaw = 
+    vec3 (( cos yaw) * (cos pitch)) (sin pitch) ((sin yaw) * (cos pitch))
+
 
 
 create_camera_uniform : Float -> Float -> Vec3 -> Mat4 
 create_camera_uniform pitch yaw camera_coordinates= 
     let 
-        yaw_d = degrees yaw
-        pitch_d = degrees pitch
         --_ = Debug.log "coordinate,yaw,pitch:" (camera_coordinates,pitch,yaw)
-        rotation_vec = vec3 ((Basics.cos yaw_d) * (Basics.cos pitch_d)) (Basics.sin pitch_d) ((Basics.sin yaw_d) * (Basics.cos pitch_d))
-        looking_at = Vec3.add camera_coordinates rotation_vec
+        camera_dir = vec3 ((Basics.cos yaw) * (Basics.cos pitch)) (Basics.sin pitch) ((Basics.sin yaw) * (Basics.cos pitch))
+        --camera_dir = get_camera_dir yaw pitch 
+        looking_at = Vec3.add camera_coordinates camera_dir
     in 
-    Mat4.makeLookAt camera_coordinates looking_at (vec3 0 1 0)
+    Mat4.makeLookAt camera_coordinates looking_at Vec3.j
     --Mat4.makeLookAt (camera_coordinates) (Vec3.add camera_coordinates (vec3 0 -1 -10)) (vec3 0 1 0)
 
 create_perspective_matrix : Float -> Mat4 

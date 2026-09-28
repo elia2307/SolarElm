@@ -13,6 +13,10 @@ import Array exposing (Array)
 import Shaders exposing (create_camera_uniform)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Shaders exposing (create_perspective_matrix)
+import Meshes exposing (vertex_list_to_mesh)
+import Meshes exposing (draw_circle_spheres)
+import Meshes exposing (strange_donut_mesh)
+import Math.Vector3 exposing (cross)
 
 
 
@@ -95,7 +99,7 @@ generate_random_sphere n vertices=
         --velocity = vec3 (0.00025*z + 0.000002 * (fmodBy 100 (n+163))) (-0.00012439*x - 0.000005 * (fmodBy 100 (n+345)) + 0.000001) (0.0001 * y + 0.0000009 * (fmodBy 100 (n+136)))  
         velocity = vec3 (0.00025 * x + 0.00010 * y + 0.00009 * z + 0.00003) ( 0.00009 * x + 0.00013 * y + 0.0000913423 *z + 0.00003) (0.0001 * (x+y+z) + 0.00003)
         rotation = vec3  (0.001*x) (0.001*y) (0.001*z) 
-        mesh = sphere_mesh (vec3 0 0 0) 0.1 vertices
+        mesh =vertex_list_to_mesh (sphere_mesh (vec3 0 0 0) 0.1 vertices)
         rotation_spin_velocity = vec3 (0.0001 * x) (0.0001 * y ) (0.0001 * z)
     in 
     Object_data mesh coords rotation velocity rotation_spin_velocity
@@ -113,7 +117,7 @@ generate_random_spheres number vertices =
 initialise_scene : Int -> Scene_Objects
 initialise_scene sphere_triangle_count = 
     let 
-        sphere = { mesh = (sphere_mesh (vec3 0 0 0) 1 sphere_triangle_count), coordinates =  (vec3 0 0 0), rotation =  (vec3 0 0 0), 
+        sphere = { mesh = (vertex_list_to_mesh (sphere_mesh (vec3 0 0 0) 1 sphere_triangle_count)), coordinates =  (vec3 0 0 0), rotation =  (vec3 0 0 0), 
             velocity = (vec3 0.0001 0.0001 0.0001), 
 
             rotation_spin_velocity =  (vec3 0 0.0007 0.0005)}
@@ -121,6 +125,15 @@ initialise_scene sphere_triangle_count =
         randoms = generate_random_spheres 2000 128
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
+
+initialise_donut_scene : Int -> Scene_Objects 
+initialise_donut_scene step_count = 
+    let 
+        donut = { mesh = strange_donut_mesh (vec3 0 0 0) 1 0.4 step_count, coordinates = vec3 0 0 0, rotation = vec3 0 0 0, velocity = vec3 0 0 0 , rotation_spin_velocity = vec3 0.001 0.0007 0.0005}
+        crosshair = { mesh = vertex_list_to_mesh (sphere_mesh (vec3 0 0 0) 0.25 100), coordinates =  vec3 0 0 0, rotation = vec3 0 0 0, rotation_spin_velocity = vec3 0 0 0, velocity = vec3 0 0 0}
+    in 
+    Scene_Objects (Array.fromList [donut, crosshair])
+
 
 update_scene_sphere : Scene_Objects -> Object_data -> Scene_Objects
 update_scene_sphere scene sphere = { objects = (Array.set 0 sphere scene.objects)}  
@@ -150,5 +163,8 @@ show_scene camera_coordinates pitch yaw fov scene=
         perspective = create_perspective_matrix fov
     in
         Array.toList (Array.map (show_object camera_uniform perspective) scene.objects)  
+
+
+
 
 

@@ -258,8 +258,8 @@ map_triangles_from_to start_tri end_tri triangle_vertexes=
             transformed
 
 
-sphere_mesh: Vec3 -> Float -> Int -> WebGL.Mesh Vertex 
-sphere_mesh centrePoint radius no_triangles = WebGL.triangles <|List.concat <|
+sphere_mesh: Vec3 -> Float -> Int -> List(Vertex,Vertex,Vertex) 
+sphere_mesh centrePoint radius no_triangles = 
         let 
             default_triangle = draw_triangles (no_triangles//8)
             start_triangle = (( vec3 -1 -1 0), (vec3 1 -1 0), (vec3 0 1 0)) 
@@ -286,6 +286,32 @@ sphere_mesh centrePoint radius no_triangles = WebGL.triangles <|List.concat <|
                 ,map_triangles_from_to start_triangle (north_pole, west_pole, back_pole) default_triangle
                 ]
         in
-        [normalise_points points centrePoint radius ]
+        List.concat [normalise_points points centrePoint radius ]
         --[points, pole_triangles]
 
+vertex_list_to_mesh: List(Vertex,Vertex,Vertex) -> WebGL.Mesh Vertex
+vertex_list_to_mesh vertexes = WebGL.triangles vertexes
+
+
+
+draw_circle_spheres :  Vec3 -> Float -> Float -> Float -> Float -> List(Vertex,Vertex,Vertex)
+draw_circle_spheres centre_point sphere_distance sphere_radius per_sphere_angle current_angle = 
+    if current_angle >= (2*pi) then 
+        []
+    else 
+        let 
+            sphere_centre_distance = Vec3.scale (sphere_radius+ sphere_distance) (vec3 (sin current_angle) (cos current_angle) 0)
+            sphere_centre_point = Vec3.add sphere_centre_distance centre_point
+            curr_sphere = sphere_mesh sphere_centre_point sphere_radius 100 
+        in 
+        List.concat [ curr_sphere , draw_circle_spheres centre_point sphere_distance sphere_radius per_sphere_angle ( current_angle + per_sphere_angle) ]  
+    
+
+strange_donut_mesh: Vec3 -> Float -> Float -> Int-> WebGL.Mesh Vertex
+strange_donut_mesh centre_point inner_radius  outer_radius number_steps = 
+        let
+            sphere_centre_radius = (inner_radius + outer_radius) /2 
+            sphere_radius = (outer_radius - inner_radius) /2 
+            per_sphere_angle = (2 * pi) /(toFloat number_steps) 
+        in 
+        vertex_list_to_mesh (draw_circle_spheres centre_point sphere_centre_radius sphere_radius  per_sphere_angle 0)

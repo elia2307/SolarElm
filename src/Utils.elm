@@ -37,3 +37,17 @@ multiply_vec3_fields a b =
             
 
 
+clamp_vec : Vec3 -> Vec3 -> Vec3 -> Vec3 
+clamp_vec low high vec = 
+    vec3 (clamp (Vec3.getX low) (Vec3.getX high) (Vec3.getX vec)) (clamp (Vec3.getY low) (Vec3.getY high) (Vec3.getY vec)) (clamp (Vec3.getZ low) (Vec3.getZ high) (Vec3.getZ vec))
+
+
+float_2dp: Float -> Float 
+float_2dp num = 
+    (toFloat (round(num*100))) / 100
+
+vec_to_string : Vec3 -> String 
+vec_to_string vec = 
+    String.concat [ "[", (String.fromFloat (float_2dp (Vec3.getX vec))), "," , (String.fromFloat (float_2dp (Vec3.getY vec))), ",", (String.fromFloat  (float_2dp (Vec3.getZ vec))), "]"]
+
+

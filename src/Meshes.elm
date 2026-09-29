@@ -3,8 +3,7 @@ module Meshes exposing (..)
 
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
-import Matrix exposing (find_transform_for_triangles, Mat3, create_mat3_from_tuple, apply_translation_to_triangle_vertexes, apply_affine_transform_to_triangle_vertexes, Vertex)
-import Matrix exposing (mat3_to_string)
+import Matrix exposing (find_transform_for_triangles, create_mat3_from_tuple, apply_translation_to_triangle_vertexes, apply_affine_transform_to_triangle_vertexes, Vertex)
 
 
 average_vecs : List(Vec3) -> Vec3

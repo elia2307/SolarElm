@@ -2,7 +2,6 @@ module Shaders exposing (..)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
-import Meshes exposing (sphere_mesh, pyramid_cube_mesh)
 import Matrix exposing (Vertex)
 
 

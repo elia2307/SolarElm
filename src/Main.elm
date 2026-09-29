@@ -5,9 +5,8 @@ import Browser.Events as Events
 import Html exposing (Html, input, div)
 import Html.Events exposing (onInput)
 import Html.Events exposing (on)
-import Html.Attributes exposing (width, height, style, value, placeholder, type_)
+import Html.Attributes exposing (id, width, height, style, value, placeholder, type_)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Math.Matrix4 as Mat4 exposing (Mat4)
 import Json.Decode as Decode
 
 import WebGL
@@ -18,7 +17,7 @@ import Scene exposing (Scene_Objects, initialise_scene, update_scene_movement, u
 import Html exposing (p)
 import Html exposing (text)
 import Dict exposing (keys)
-import Shaders exposing (create_3d_rotation_matrix_1step, get_camera_dir)
+import Shaders exposing (get_camera_dir)
 import Meshes exposing (vertex_list_to_mesh)
 
 -- MAIN
@@ -101,7 +100,8 @@ update_keys isDown key keys =
         " " -> { keys | space = isDown}
         "Control" -> {keys | ctrl = isDown}
         "Shift" -> {keys | shift = isDown}
-        _ -> let _ = Debug.log "key:" key in keys
+        --_ -> let _ = Debug.log "key:" key in keys
+        _ -> keys
  
 
 clamp_vec : Vec3 -> Vec3 -> Vec3 -> Vec3 
@@ -133,7 +133,6 @@ update_coordinates keys coordinates pitch yaw=
         x_vdiff = if x_diff < 0 then (Vec3.scale -1 camera_cross) else if x_diff > 0 then camera_cross else (vec3 0 0 0)
         --x_vdiff = vec3 x_diff 0 0 
         res = Vec3.add x_vdiff (Vec3.add y_vidff z_vdiff) 
-        _ = Debug.log "movement vector, x_diff,y_diff,z_diff:" (res , (x_diff , y_diff, z_diff)) 
         
         
     in 
@@ -261,7 +260,7 @@ view model =
             div [style "z-index" "1", style "position" "absolute"] (if model.show_debug_info then debug_info else [])
 
             , WebGL.toHtml
-                [ width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
+                [ id "mainCanvas" , width 1920, height 1080, style "display" "table", style "width" "100%", style "height" "100%", style "background-color" "black" ,style "position" "absolute", style "top" "0"
                 ]
                 (show_scene model.camera_coordinates model.camera_pitch model.camera_yaw model.fov model.scene)
             ]

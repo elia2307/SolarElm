@@ -1,0 +1,19 @@
+<html>
+    <head>
+            <meta charset="UTF-8">
+            <title>Solar Elm</title>
+            <script src="main.js"></script>
+    </head>
+    <body style="margin:0px">
+        <div id="app"></div>
+        <script>
+            var app = Elm.Main.init({ node : document.getElementById("app")})
+            canvas = document.getElementById("mainCanvas")
+            canvas.addEventListener("click", async () => {
+                console.log("Pointer lock")
+                await canvas.requestPointerLock();
+
+            });
+        </script>
+    </body>
+</html>

@@ -122,7 +122,7 @@ initialise_scene sphere_triangle_count =
 
             rotation_spin_velocity =  (vec3 0 0.0007 0.0005)}
         dia = { mesh = ( pyramid_cube_mesh (vec3 0 0 0) 0.5) , coordinates = ( vec3 0 0 -2) , rotation = ( vec3 -0.1 1 0), velocity = (vec3 -0.0001 0.001 -0.001),rotation_spin_velocity = (vec3 0.0005 0 -0.0005)}
-        randoms = generate_random_spheres 2000 128
+        randoms = generate_random_spheres 3000 128
     in 
     Scene_Objects (Array.fromList (List.concat [[sphere, dia], randoms])) 
 

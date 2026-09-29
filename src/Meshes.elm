@@ -1,5 +1,5 @@
 module Meshes exposing (..)
-import Utils exposing (print_text)
+--import DebugUtils exposing (print_text)
 
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL
@@ -26,7 +26,6 @@ pyramid_mesh a b c d dir=
         colord = vec3 1 0 1
         colore = vec3 0.9 0.9 0.9
         e = Vec3.add ( average_vecs  [a,b,c,d]) dir   
-        --_ = print_vec e
     in 
         [   (Vertex colora a
             ,Vertex colorb b
@@ -240,17 +239,11 @@ map_triangles_from_to start_tri end_tri triangle_vertexes=
     in 
     case res of 
         Err str -> 
-            let 
-                _ = print_text str
-            in 
+            --let _ = print_text str in 
             []
         Ok transforms -> 
             let 
                 (translation, affine) = transforms
-                --_ = Debug.log "for triangle from" start_tri
-                --_ = Debug.log "for triangle to: " end_tri
-                --_ = Debug.log "affine: " (mat3_to_string affine)
-                --_ = Debug.log "translation:" translation
                 translated = List.map (apply_translation_to_triangle_vertexes translation) triangle_vertexes
                 transformed = List.map (apply_affine_transform_to_triangle_vertexes affine) translated
                 
@@ -263,16 +256,12 @@ sphere_mesh centrePoint radius no_triangles =
         let 
             default_triangle = draw_triangles (no_triangles//8)
             start_triangle = (( vec3 -1 -1 0), (vec3 1 -1 0), (vec3 0 1 0)) 
-            --_ = Debug.log "centrePoint:" centrePoint
-            --_ = Debug.log "radius:" radius
             north_pole = Vec3.add (vec3 0 radius 0) centrePoint 
             south_pole = Vec3.add (vec3 0 -radius 0) centrePoint
             east_pole = Vec3.add (vec3 radius 0 0) centrePoint
             west_pole = Vec3.add (vec3 -radius 0 0) centrePoint
             front_pole = Vec3.add (vec3 0 0 radius) centrePoint
             back_pole = Vec3.add (vec3 0 0 -radius) centrePoint
-            --poles = [north_pole,south_pole,east_pole,west_pole,front_pole,back_pole]
-            --_ = Debug.log "poles:" poles
 
             points = List.concat
                 [ 
@@ -287,7 +276,6 @@ sphere_mesh centrePoint radius no_triangles =
                 ]
         in
         List.concat [normalise_points points centrePoint radius ]
-        --[points, pole_triangles]
 
 vertex_list_to_mesh: List(Vertex,Vertex,Vertex) -> WebGL.Mesh Vertex
 vertex_list_to_mesh vertexes = WebGL.triangles vertexes
